@@ -8,6 +8,42 @@ from pyannote.core import Segment
 import librosa
 from sklearn.cluster import AgglomerativeClustering
 import numpy as np
+from sklearn.metrics import silhouette_score
+
+
+
+
+def optimal_num_speakers(embeddings, min_speakers=2, max_speakers=5):
+    """
+    Determine the optimal number of speakers using silhouette score.
+
+    Parameters:
+    embeddings (np.array): Speaker embeddings.
+    min_speakers (int): Minimum number of speakers to consider.
+    max_speakers (int): Maximum number of speakers to consider.
+
+    Returns:
+    int: Optimal number of speakers.
+    """
+    best_num_clusters = min_speakers
+    best_silhouette = -1  # Silhouette scores range from -1 to 1
+
+    # Iterate over the range of specified cluster counts
+    for n_clusters in range(min_speakers, max_speakers + 1):
+        # Perform agglomerative clustering with n_clusters
+        clusterer = AgglomerativeClustering(n_clusters=n_clusters)
+        labels = clusterer.fit_predict(embeddings)
+
+        # Silhouette score wants a minimum of 2 clusters and at least 2 samples per cluster
+        if len(set(labels)) > 1 and all(np.bincount(labels) > 1):
+            silhouette_avg = silhouette_score(embeddings, labels)
+
+            # Check if this silhouette score is the best
+            if silhouette_avg > best_silhouette:
+                best_silhouette = silhouette_avg
+                best_num_clusters = n_clusters
+
+    return best_num_clusters
 
 # Initialize the embedding model
 embedding_model = PretrainedSpeakerEmbedding(
@@ -42,7 +78,23 @@ def segment_embedding(path, duration, segment):
     waveform, sample_rate = audio.crop(path, clip)
     return embedding_model(waveform[None])
 
-def cluster_speakers(embeddings, num_speakers):
-    clustering = AgglomerativeClustering(num_speakers).fit(embeddings)
-    labels = clustering.labels_
+# def cluster_speakers(embeddings, num_speakers):
+#     clustering = AgglomerativeClustering(num_speakers).fit(embeddings)
+#     labels = clustering.labels_
+#     return labels
+
+
+def cluster_speakers(embeddings):
+    """
+    Apply clustering to the embeddings to identify speakers.
+
+    Parameters:
+    embeddings (np.array): Speaker embeddings.
+
+    Returns:
+    list: Cluster labels.
+    """
+    num_speakers = optimal_num_speakers(embeddings)
+    clustering_model = AgglomerativeClustering(num_speakers)
+    labels = clustering_model.fit_predict(embeddings)
     return labels
