@@ -5,9 +5,9 @@ from utils import *
 
 if __name__ == '__main__':
     # Replace this part with your method of uploading audio
-    path = 'C:\\Users\\dsn\\Desktop\\speaker_recognition\\audio_files\\audio.wav'  # Update this
+    path = './audio/conversation.wav'   #Update this
 
-    # Convert to wav if not wav
+    # Convert to wav if not wav 
     if path[-3:] != 'wav':
         path = convert_to_wav(path)
 
